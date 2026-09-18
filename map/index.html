@@ -1,152 +1,265 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>いわくに文化財マップ</title>
+  <title>いわくに文化財マップ</title>
 
-<link
-  rel="stylesheet"
-  href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
->
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+  >
 
-<style>
-  body {
-    margin: 0;
-    font-family: sans-serif;
-  }
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
-  h1 {
-    margin: 16px;
-    font-size: 1.4rem;
-  }
+  <style>
+    body {
+      margin: 0;
+      font-family: sans-serif;
+      background: #f7f7f7;
+    }
 
-  #map {
-    height: calc(100vh - 70px);
-  }
-</style>
+    h1 {
+      margin: 0;
+      padding: 14px 16px;
+      font-size: 1.4rem;
+      background: white;
+      border-bottom: 1px solid #ddd;
+    }
+
+    #map {
+      height: calc(100vh - 58px);
+    }
+
+    .popup-title {
+      font-weight: bold;
+      font-size: 1.05rem;
+      margin-bottom: 6px;
+    }
+
+    .popup-row {
+      margin-top: 4px;
+    }
+
+    .legend {
+      background: rgba(255,255,255,0.95);
+      padding: 10px 12px;
+      border-radius: 6px;
+      box-shadow: 0 1px 5px rgba(0,0,0,0.25);
+      line-height: 1.6;
+      font-size: 0.9rem;
+    }
+
+    .legend-title {
+      font-weight: bold;
+      margin-bottom: 4px;
+    }
+
+    .legend-item {
+      white-space: nowrap;
+    }
+
+    .legend-dot {
+      display: inline-block;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      margin-right: 6px;
+      border: 1px solid white;
+      box-shadow: 0 0 0 1px #999;
+      vertical-align: -1px;
+    }
+  </style>
 </head>
 
 <body>
 
 <h1>いわくに文化財マップ</h1>
+
 <div id="map"></div>
 
 <script>
 
-// 初期位置
-const map = L.map('map').setView([34.16, 132.22], 12);
+  // 初期位置
+  const map = L.map('map').setView([34.16, 132.22], 11);
 
 
-// 国土地理院「淡色地図」
-L.tileLayer(
-  'https://cyberjapandata.gsi.go.jp/xyz/pale/{z}/{x}/{y}.png',
-  {
-    attribution: '国土地理院'
-  }
-).addTo(map);
+  // 国土地理院「淡色地図」
+  L.tileLayer(
+    'https://cyberjapandata.gsi.go.jp/xyz/pale/{z}/{x}/{y}.png',
+    {
+      attribution: '地図：国土地理院'
+    }
+  ).addTo(map);
 
 
-// 文化財分類ごとの色
-function getMarkerColor(category) {
+  // 分類ごとの色
+  function getMarkerColor(category) {
 
-  if (!category) {
-    return 'blue';
-  }
-
-  category = String(category);
-
-  if (category.includes('国宝')) {
-    return 'red';
-
-  } else if (category.includes('重要文化財')) {
-    return 'orange';
-
-  } else if (category.includes('県指定')) {
-    return 'green';
-
-  } else if (category.includes('市指定')) {
-    return 'blue';
-
-  } else {
-    return 'purple';
-  }
-}
-
-
-// GeoJSON読み込み
-fetch('./mapdata.geojson')
-  .then(response => response.json())
-  .then(data => {
-
-    const layer = L.geoJSON(data, {
-
-      // GeoJSONのPointを色付きマーカーにする
-      pointToLayer: (feature, latlng) => {
-
-        const p = feature.properties || {};
-        const category = p['文化財分類'] || '';
-
-        return L.marker(latlng, {
-          icon: L.icon({
-            iconUrl:
-              `https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-${getMarkerColor(category)}.png`,
-
-            shadowUrl:
-              'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
-
-            iconSize: [25, 41],
-            iconAnchor: [12, 41],
-            popupAnchor: [1, -34],
-            shadowSize: [41, 41]
-          })
-        });
-      },
-
-
-      // ポップアップ
-      onEachFeature: (feature, marker) => {
-
-        const p = feature.properties || {};
-
-        const name = p.name || '名称不明';
-        const category = p['文化財分類'] || '';
-
-        const lines = [];
-
-        lines.push(`<strong>${name}</strong>`);
-
-        if (category) {
-          lines.push(`文化財分類：${category}`);
-        }
-
-        if (p.address) {
-          lines.push(`住所：${p.address}`);
-        }
-
-        if (p.description) {
-          lines.push(p.description);
-        }
-
-        marker.bindPopup(lines.join('<br>'));
-      }
-
-    }).addTo(map);
-
-
-    // 全文化財が見える範囲へ自動調整
-    if (layer.getBounds().isValid()) {
-      map.fitBounds(
-        layer.getBounds(),
-        {
-          padding: [20, 20]
-        }
-      );
+    if (!category) {
+      return '#984ea3';
     }
 
+    category = String(category);
+
+    if (category.includes('国宝')) {
+      return '#d73027';
+
+    } else if (category.includes('重要文化財')) {
+      return '#fdae61';
+
+    } else if (category.includes('県指定')) {
+      return '#1a9850';
+
+    } else if (category.includes('市指定')) {
+      return '#3388ff';
+
+    } else {
+      return '#984ea3';
+    }
+  }
+
+
+  // GeoJSON読み込み
+  fetch('./mapdata.geojson')
+    .then(response => {
+
+      if (!response.ok) {
+        throw new Error('GeoJSONの読み込みに失敗しました');
+      }
+
+      return response.json();
+    })
+    .then(data => {
+
+      const layer = L.geoJSON(data, {
+
+        // 安定版：画像を使わず circleMarker を使用
+        pointToLayer: (feature, latlng) => {
+
+          const p = feature.properties || {};
+          const category = p['文化財分類'] || '';
+
+          return L.circleMarker(latlng, {
+            radius: 8,
+            color: '#ffffff',
+            weight: 2,
+            fillColor: getMarkerColor(category),
+            fillOpacity: 0.9
+          });
+        },
+
+
+        // ポップアップ
+        onEachFeature: (feature, marker) => {
+
+          const p = feature.properties || {};
+
+          const name = p.name || '名称不明';
+          const category = p['文化財分類'] || '';
+
+          const lines = [];
+
+          lines.push(
+            `<div class="popup-title">${escapeHtml(name)}</div>`
+          );
+
+          if (category) {
+            lines.push(
+              `<div class="popup-row">文化財分類：${escapeHtml(category)}</div>`
+            );
+          }
+
+          if (p.address) {
+            lines.push(
+              `<div class="popup-row">住所：${escapeHtml(p.address)}</div>`
+            );
+          }
+
+          if (p.description) {
+            lines.push(
+              `<div class="popup-row">${escapeHtml(p.description)}</div>`
+            );
+          }
+
+          marker.bindPopup(lines.join(''));
+        }
+
+      }).addTo(map);
+
+
+      // 全地点が入る範囲に自動調整
+      if (layer.getBounds().isValid()) {
+        map.fitBounds(
+          layer.getBounds(),
+          {
+            padding: [30, 30]
+          }
+        );
+      }
+
+    })
+    .catch(error => {
+      console.error(error);
+      alert('文化財データを読み込めませんでした。');
+    });
+
+
+  // 凡例
+  const legend = L.control({
+    position: 'bottomright'
   });
+
+  legend.onAdd = function() {
+
+    const div = L.DomUtil.create('div', 'legend');
+
+    div.innerHTML = `
+      <div class="legend-title">文化財分類</div>
+
+      <div class="legend-item">
+        <span class="legend-dot" style="background:#d73027"></span>
+        国宝
+      </div>
+
+      <div class="legend-item">
+        <span class="legend-dot" style="background:#fdae61"></span>
+        重要文化財
+      </div>
+
+      <div class="legend-item">
+        <span class="legend-dot" style="background:#1a9850"></span>
+        県指定
+      </div>
+
+      <div class="legend-item">
+        <span class="legend-dot" style="background:#3388ff"></span>
+        市指定
+      </div>
+
+      <div class="legend-item">
+        <span class="legend-dot" style="background:#984ea3"></span>
+        その他
+      </div>
+    `;
+
+    return div;
+  };
+
+  legend.addTo(map);
+
+
+  // HTMLエスケープ
+  function escapeHtml(value) {
+
+    return String(value)
+      .replaceAll('&', '&amp;')
+      .replaceAll('<', '&lt;')
+      .replaceAll('>', '&gt;')
+      .replaceAll('"', '&quot;')
+      .replaceAll("'", '&#039;');
+  }
 
 </script>
 
