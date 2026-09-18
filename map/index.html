@@ -42,16 +42,18 @@
       margin-top: 4px;
     }
 
-    .legend {
+    .legend,
+    .filter-box {
       background: rgba(255,255,255,0.95);
       padding: 10px 12px;
       border-radius: 6px;
       box-shadow: 0 1px 5px rgba(0,0,0,0.25);
-      line-height: 1.6;
+      line-height: 1.7;
       font-size: 0.9rem;
     }
 
-    .legend-title {
+    .legend-title,
+    .filter-title {
       font-weight: bold;
       margin-bottom: 4px;
     }
@@ -70,6 +72,43 @@
       box-shadow: 0 0 0 1px #999;
       vertical-align: -1px;
     }
+
+    .legend-symbol {
+      display: inline-block;
+      width: 18px;
+      text-align: center;
+      margin-right: 4px;
+      font-weight: bold;
+      font-size: 1.1rem;
+    }
+
+    .filter-box label {
+      display: block;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+
+    .filter-box input {
+      margin-right: 6px;
+    }
+
+    .special-marker {
+      background: transparent;
+      border: none;
+    }
+
+    .special-symbol {
+      font-size: 24px;
+      font-weight: bold;
+      text-align: center;
+      line-height: 28px;
+
+      text-shadow:
+        -1px -1px 0 #fff,
+         1px -1px 0 #fff,
+        -1px  1px 0 #fff,
+         1px  1px 0 #fff;
+    }
   </style>
 </head>
 
@@ -81,7 +120,10 @@
 
 <script>
 
-  // 初期位置
+  // --------------------------------------------------
+  // 地図
+  // --------------------------------------------------
+
   const map = L.map('map').setView([34.16, 132.22], 11);
 
 
@@ -94,35 +136,149 @@
   ).addTo(map);
 
 
-  // 分類ごとの色
-  function getMarkerColor(category) {
+  // --------------------------------------------------
+  // 分類
+  // --------------------------------------------------
 
-    if (!category) {
-      return '#984ea3';
-    }
+  function getCategoryGroup(category) {
 
-    category = String(category);
+    category = String(category || '');
 
     if (category.includes('国宝')) {
-      return '#d73027';
+      return 'nationalTreasure';
 
     } else if (category.includes('重要文化財')) {
-      return '#fdae61';
+      return 'important';
 
     } else if (category.includes('県指定')) {
-      return '#1a9850';
+      return 'prefecture';
 
     } else if (category.includes('市指定')) {
-      return '#3388ff';
+      return 'city';
 
     } else {
-      return '#984ea3';
+      return 'other';
     }
   }
 
 
-  // GeoJSON読み込み
+  // --------------------------------------------------
+  // レイヤー
+  // --------------------------------------------------
+
+  const layers = {
+
+    nationalTreasure: L.layerGroup().addTo(map),
+
+    important: L.layerGroup().addTo(map),
+
+    prefecture: L.layerGroup().addTo(map),
+
+    city: L.layerGroup().addTo(map),
+
+    other: L.layerGroup().addTo(map)
+
+  };
+
+
+  // --------------------------------------------------
+  // マーカー作成
+  // --------------------------------------------------
+
+  function createMarker(feature, latlng) {
+
+    const p = feature.properties || {};
+
+    const category = p['文化財分類'] || '';
+
+    const group = getCategoryGroup(category);
+
+
+    // 国宝 ★
+    if (group === 'nationalTreasure') {
+
+      const icon = L.divIcon({
+        className: 'special-marker',
+        html: `
+          <div
+            class="special-symbol"
+            style="color:#d73027"
+          >
+            ★
+          </div>
+        `,
+        iconSize: [28, 28],
+        iconAnchor: [14, 14]
+      });
+
+      return L.marker(latlng, { icon });
+    }
+
+
+    // 重要文化財 ◆
+    if (group === 'important') {
+
+      const icon = L.divIcon({
+        className: 'special-marker',
+        html: `
+          <div
+            class="special-symbol"
+            style="color:#f39c12"
+          >
+            ◆
+          </div>
+        `,
+        iconSize: [28, 28],
+        iconAnchor: [14, 14]
+      });
+
+      return L.marker(latlng, { icon });
+    }
+
+
+    // 県指定
+    if (group === 'prefecture') {
+
+      return L.circleMarker(latlng, {
+        radius: 8,
+        color: '#ffffff',
+        weight: 2,
+        fillColor: '#1a9850',
+        fillOpacity: 0.9
+      });
+    }
+
+
+    // 市指定
+    if (group === 'city') {
+
+      return L.circleMarker(latlng, {
+        radius: 8,
+        color: '#ffffff',
+        weight: 2,
+        fillColor: '#3388ff',
+        fillOpacity: 0.9
+      });
+    }
+
+
+    // その他
+    return L.circleMarker(latlng, {
+      radius: 8,
+      color: '#ffffff',
+      weight: 2,
+      fillColor: '#984ea3',
+      fillOpacity: 0.9
+    });
+  }
+
+
+  // --------------------------------------------------
+  // GeoJSON
+  // --------------------------------------------------
+
   fetch('./mapdata.geojson')
+
     .then(response => {
 
       if (!response.ok) {
@@ -131,134 +287,369 @@
 
       return response.json();
     })
+
     .then(data => {
 
-      const layer = L.geoJSON(data, {
-
-        // 安定版：画像を使わず circleMarker を使用
-        pointToLayer: (feature, latlng) => {
-
-          const p = feature.properties || {};
-          const category = p['文化財分類'] || '';
-
-          return L.circleMarker(latlng, {
-            radius: 8,
-            color: '#ffffff',
-            weight: 2,
-            fillColor: getMarkerColor(category),
-            fillOpacity: 0.9
-          });
-        },
+      const bounds = [];
 
 
-        // ポップアップ
-        onEachFeature: (feature, marker) => {
+      data.features.forEach(feature => {
 
-          const p = feature.properties || {};
-
-          const name = p.name || '名称不明';
-          const category = p['文化財分類'] || '';
-
-          const lines = [];
-
-          lines.push(
-            `<div class="popup-title">${escapeHtml(name)}</div>`
-          );
-
-          if (category) {
-            lines.push(
-              `<div class="popup-row">文化財分類：${escapeHtml(category)}</div>`
-            );
-          }
-
-          if (p.address) {
-            lines.push(
-              `<div class="popup-row">住所：${escapeHtml(p.address)}</div>`
-            );
-          }
-
-          if (p.description) {
-            lines.push(
-              `<div class="popup-row">${escapeHtml(p.description)}</div>`
-            );
-          }
-
-          marker.bindPopup(lines.join(''));
+        if (!feature.geometry) {
+          return;
         }
 
-      }).addTo(map);
+        if (feature.geometry.type !== 'Point') {
+          return;
+        }
+
+        const [lon, lat] =
+          feature.geometry.coordinates;
+
+        const latlng =
+          L.latLng(lat, lon);
 
 
-      // 全地点が入る範囲に自動調整
-      if (layer.getBounds().isValid()) {
+        const marker =
+          createMarker(
+            feature,
+            latlng
+          );
+
+
+        // ------------------------------
+        // ポップアップ
+        // ------------------------------
+
+        const p =
+          feature.properties || {};
+
+        const name =
+          p.name || '名称不明';
+
+        const category =
+          p['文化財分類'] || '';
+
+
+        const lines = [];
+
+        lines.push(
+          `<div class="popup-title">${escapeHtml(name)}</div>`
+        );
+
+
+        if (category) {
+
+          lines.push(
+            `<div class="popup-row">
+              文化財分類：
+              ${escapeHtml(category)}
+            </div>`
+          );
+
+        }
+
+
+        if (p.address) {
+
+          lines.push(
+            `<div class="popup-row">
+              住所：
+              ${escapeHtml(p.address)}
+            </div>`
+          );
+
+        }
+
+
+        if (p.description) {
+
+          lines.push(
+            `<div class="popup-row">
+              ${escapeHtml(p.description)}
+            </div>`
+          );
+
+        }
+
+
+        marker.bindPopup(
+          lines.join('')
+        );
+
+
+        // ------------------------------
+        // 分類レイヤーへ追加
+        // ------------------------------
+
+        const group =
+          getCategoryGroup(category);
+
+        marker.addTo(
+          layers[group]
+        );
+
+
+        bounds.push(latlng);
+
+      });
+
+
+      // 全文化財を表示
+      if (bounds.length > 0) {
+
         map.fitBounds(
-          layer.getBounds(),
+          bounds,
           {
             padding: [30, 30]
           }
         );
+
       }
 
     })
+
     .catch(error => {
+
       console.error(error);
-      alert('文化財データを読み込めませんでした。');
+
+      alert(
+        '文化財データを読み込めませんでした。'
+      );
+
     });
 
 
-  // 凡例
-  const legend = L.control({
-    position: 'bottomright'
-  });
+  // --------------------------------------------------
+  // フィルター
+  // --------------------------------------------------
 
-  legend.onAdd = function() {
+  const filterControl =
+    L.control({
+      position: 'topright'
+    });
 
-    const div = L.DomUtil.create('div', 'legend');
+
+  filterControl.onAdd = function() {
+
+    const div =
+      L.DomUtil.create(
+        'div',
+        'filter-box'
+      );
+
 
     div.innerHTML = `
-      <div class="legend-title">文化財分類</div>
 
-      <div class="legend-item">
-        <span class="legend-dot" style="background:#d73027"></span>
-        国宝
+      <div class="filter-title">
+        表示する文化財
       </div>
 
-      <div class="legend-item">
-        <span class="legend-dot" style="background:#fdae61"></span>
-        重要文化財
-      </div>
+      <label>
+        <input
+          type="checkbox"
+          data-layer="nationalTreasure"
+          checked
+        >
+        ★ 国宝
+      </label>
 
-      <div class="legend-item">
-        <span class="legend-dot" style="background:#1a9850"></span>
-        県指定
-      </div>
+      <label>
+        <input
+          type="checkbox"
+          data-layer="important"
+          checked
+        >
+        ◆ 重要文化財
+      </label>
 
-      <div class="legend-item">
-        <span class="legend-dot" style="background:#3388ff"></span>
-        市指定
-      </div>
+      <label>
+        <input
+          type="checkbox"
+          data-layer="prefecture"
+          checked
+        >
+        ● 県指定
+      </label>
 
-      <div class="legend-item">
-        <span class="legend-dot" style="background:#984ea3"></span>
-        その他
-      </div>
+      <label>
+        <input
+          type="checkbox"
+          data-layer="city"
+          checked
+        >
+        ● 市指定
+      </label>
+
+      <label>
+        <input
+          type="checkbox"
+          data-layer="other"
+          checked
+        >
+        ● その他
+      </label>
+
     `;
+
+
+    // 地図操作へのイベント伝播を止める
+    L.DomEvent.disableClickPropagation(div);
+
+    L.DomEvent.disableScrollPropagation(div);
+
+
+    // チェックボックス
+    div
+      .querySelectorAll('input[type="checkbox"]')
+      .forEach(input => {
+
+        input.addEventListener(
+          'change',
+          event => {
+
+            const layerName =
+              event.target.dataset.layer;
+
+            const layer =
+              layers[layerName];
+
+
+            if (event.target.checked) {
+
+              map.addLayer(layer);
+
+            } else {
+
+              map.removeLayer(layer);
+
+            }
+
+          }
+        );
+
+      });
+
 
     return div;
   };
 
+
+  filterControl.addTo(map);
+
+
+  // --------------------------------------------------
+  // 凡例
+  // --------------------------------------------------
+
+  const legend =
+    L.control({
+      position: 'bottomright'
+    });
+
+
+  legend.onAdd = function() {
+
+    const div =
+      L.DomUtil.create(
+        'div',
+        'legend'
+      );
+
+
+    div.innerHTML = `
+
+      <div class="legend-title">
+        文化財分類
+      </div>
+
+      <div class="legend-item">
+        <span
+          class="legend-symbol"
+          style="color:#d73027"
+        >
+          ★
+        </span>
+        国宝
+      </div>
+
+      <div class="legend-item">
+        <span
+          class="legend-symbol"
+          style="color:#f39c12"
+        >
+          ◆
+        </span>
+        重要文化財
+      </div>
+
+      <div class="legend-item">
+        <span
+          class="legend-dot"
+          style="background:#1a9850"
+        ></span>
+        県指定
+      </div>
+
+      <div class="legend-item">
+        <span
+          class="legend-dot"
+          style="background:#3388ff"
+        ></span>
+        市指定
+      </div>
+
+      <div class="legend-item">
+        <span
+          class="legend-dot"
+          style="background:#984ea3"
+        ></span>
+        その他
+      </div>
+
+    `;
+
+
+    return div;
+  };
+
+
   legend.addTo(map);
 
 
+  // --------------------------------------------------
   // HTMLエスケープ
+  // --------------------------------------------------
+
   function escapeHtml(value) {
 
     return String(value)
-      .replaceAll('&', '&amp;')
-      .replaceAll('<', '&lt;')
-      .replaceAll('>', '&gt;')
-      .replaceAll('"', '&quot;')
-      .replaceAll("'", '&#039;');
+
+      .replaceAll(
+        '&',
+        '&amp;'
+      )
+
+      .replaceAll(
+        '<',
+        '&lt;'
+      )
+
+      .replaceAll(
+        '>',
+        '&gt;'
+      )
+
+      .replaceAll(
+        '"',
+        '&quot;'
+      )
+
+      .replaceAll(
+        "'",
+        '&#039;'
+      );
+
   }
 
 </script>
