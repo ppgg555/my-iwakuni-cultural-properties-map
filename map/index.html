@@ -33,9 +33,9 @@
       height: 100%;
     }
 
-    /* =========================================
+    /* =========================
        サイドバー
-       ========================================= */
+       ========================= */
 
     .sidebar {
       width: 270px;
@@ -106,20 +106,32 @@
       flex-shrink: 0;
     }
 
-    .favorite-count {
-      display: inline-block;
-      margin-left: 6px;
-      min-width: 24px;
-      padding: 2px 7px;
-      border-radius: 999px;
-      background: #eee;
-      font-size: 0.8rem;
-      text-align: center;
+    /* =========================
+       検索
+       ========================= */
+
+    .search-box {
+      width: 100%;
+      padding: 9px 10px;
+      border: 1px solid #bbb;
+      border-radius: 7px;
+      font-size: 0.95rem;
+      outline: none;
     }
 
-    /* =========================================
+    .search-box:focus {
+      border-color: #666;
+    }
+
+    .search-info {
+      margin-top: 6px;
+      font-size: 0.78rem;
+      color: #777;
+    }
+
+    /* =========================
        ボタン
-       ========================================= */
+       ========================= */
 
     .button-row {
       display: flex;
@@ -141,20 +153,9 @@
       background: #f0f0f0;
     }
 
-    .favorite-filter-button {
-      width: 100%;
-      margin-top: 8px;
-    }
-
-    .favorite-filter-button.active {
-      background: #fff4c2;
-      border-color: #d6a600;
-      font-weight: bold;
-    }
-
-    /* =========================================
+    /* =========================
        地図
-       ========================================= */
+       ========================= */
 
     #map {
       flex: 1;
@@ -162,9 +163,9 @@
       min-width: 0;
     }
 
-    /* =========================================
+    /* =========================
        ポップアップ
-       ========================================= */
+       ========================= */
 
     .popup-title {
       font-weight: bold;
@@ -176,16 +177,9 @@
       margin-top: 4px;
     }
 
-    .favorite-popup-button {
-      width: 100%;
-      margin-top: 10px;
-      border: 1px solid #d0a000;
-      background: #fff8d8;
-    }
-
-    /* =========================================
+    /* =========================
        特殊マーカー
-       ========================================= */
+       ========================= */
 
     .special-marker {
       background: transparent;
@@ -205,17 +199,15 @@
          1px  1px 0 #fff;
     }
 
-    /* =========================================
+    /* =========================
        スマホ用メニューボタン
-       ========================================= */
+       ========================= */
 
     .menu-button {
       display: none;
-
       position: fixed;
       top: 12px;
       left: 12px;
-
       z-index: 3000;
 
       width: 46px;
@@ -235,10 +227,6 @@
       cursor: pointer;
     }
 
-    /* =========================================
-       スマホ背景オーバーレイ
-       ========================================= */
-
     .sidebar-overlay {
       display: none;
 
@@ -250,9 +238,9 @@
       z-index: 1900;
     }
 
-    /* =========================================
+    /* =========================
        スマホ
-       ========================================= */
+       ========================= */
 
     @media (max-width: 768px) {
 
@@ -277,9 +265,7 @@
         height: 100%;
 
         transform: translateX(-100%);
-
-        transition:
-          transform 0.25s ease;
+        transition: transform 0.25s ease;
 
         box-shadow:
           4px 0 14px rgba(0,0,0,0.25);
@@ -360,6 +346,30 @@
       地図から見てみよう
     </div>
 
+    <!-- 名称検索 -->
+    <div class="section">
+
+      <div class="section-title">
+        名称で検索
+      </div>
+
+      <input
+        id="nameSearch"
+        class="search-box"
+        type="search"
+        placeholder="例：錦帯橋、神社、寺..."
+      >
+
+      <div
+        id="searchInfo"
+        class="search-info"
+      >
+        名称の一部を入力してください
+      </div>
+
+    </div>
+
+    <!-- カテゴリ -->
     <div class="section">
 
       <div class="section-title">
@@ -426,6 +436,7 @@
       </label>
 
       <div class="button-row">
+
         <button id="showAll">
           全て表示
         </button>
@@ -433,44 +444,12 @@
         <button id="showMajor">
           国宝・重要のみ
         </button>
+
       </div>
 
     </div>
 
-
-    <div class="section">
-
-      <div class="section-title">
-        お気に入り
-        <span
-          id="favoriteCount"
-          class="favorite-count"
-        >
-          0
-        </span>
-      </div>
-
-      <button
-        id="favoriteOnlyButton"
-        class="favorite-filter-button"
-      >
-        ☆ お気に入りだけ表示
-      </button>
-
-      <div
-        style="
-          margin-top:8px;
-          font-size:0.78rem;
-          color:#777;
-          line-height:1.5;
-        "
-      >
-        この端末・このブラウザにだけ保存されます。
-      </div>
-
-    </div>
-
-
+    <!-- 凡例 -->
     <div class="section">
 
       <div class="section-title">
@@ -532,12 +511,8 @@
 <script>
 
   // =========================================
-  // 基本
+  // 地図
   // =========================================
-
-  const FAVORITE_KEY =
-    'iwakuni-cultural-properties-favorites';
-
 
   const map =
     L.map('map').setView(
@@ -545,156 +520,12 @@
       11
     );
 
-
   L.tileLayer(
     'https://cyberjapandata.gsi.go.jp/xyz/pale/{z}/{x}/{y}.png',
     {
       attribution: '地図：国土地理院'
     }
   ).addTo(map);
-
-
-
-  // =========================================
-  // お気に入り
-  // =========================================
-
-  function getFavorites() {
-
-    try {
-
-      return JSON.parse(
-        localStorage.getItem(
-          FAVORITE_KEY
-        ) || '[]'
-      );
-
-    } catch {
-
-      return [];
-
-    }
-
-  }
-
-
-  function saveFavorites(favorites) {
-
-    localStorage.setItem(
-      FAVORITE_KEY,
-      JSON.stringify(favorites)
-    );
-
-    updateFavoriteCount();
-
-  }
-
-
-  function isFavorite(id) {
-
-    return getFavorites()
-      .includes(id);
-
-  }
-
-
-  function toggleFavorite(id) {
-
-    let favorites =
-      getFavorites();
-
-
-    if (
-      favorites.includes(id)
-    ) {
-
-      favorites =
-        favorites.filter(
-          item => item !== id
-        );
-
-    } else {
-
-      favorites.push(id);
-
-    }
-
-
-    saveFavorites(favorites);
-
-
-    refreshMarkers();
-
-
-    const markerInfo =
-      markerRegistry.find(
-        item => item.id === id
-      );
-
-
-    if (
-      markerInfo &&
-      markerInfo.marker
-    ) {
-
-      markerInfo.marker
-        .setPopupContent(
-          buildPopupHtml(
-            markerInfo.feature,
-            markerInfo.id
-          )
-        );
-
-    }
-
-  }
-
-
-  function updateFavoriteCount() {
-
-    document
-      .getElementById(
-        'favoriteCount'
-      )
-      .textContent =
-        getFavorites().length;
-
-  }
-
-
-
-  // =========================================
-  // ID生成
-  // =========================================
-
-  function createFeatureId(
-    feature,
-    lat,
-    lon
-  ) {
-
-    const p =
-      feature.properties || {};
-
-
-    if (p.id) {
-      return String(p.id);
-    }
-
-
-    if (p.ID) {
-      return String(p.ID);
-    }
-
-
-    const name =
-      p.name || 'unknown';
-
-
-    return `${name}_${lat}_${lon}`;
-
-  }
-
 
 
   // =========================================
@@ -706,13 +537,11 @@
     category =
       String(category || '');
 
-
     if (
       category.includes('国宝')
     ) {
       return 'nationalTreasure';
     }
-
 
     if (
       category.includes('重要文化財')
@@ -720,13 +549,11 @@
       return 'important';
     }
 
-
     if (
       category.includes('県指定')
     ) {
       return 'prefecture';
     }
-
 
     if (
       category.includes('市指定')
@@ -734,10 +561,8 @@
       return 'city';
     }
 
-
     return 'other';
   }
-
 
 
   // =========================================
@@ -764,11 +589,7 @@
   };
 
 
-  let favoriteOnly = false;
-
-
   const markerRegistry = [];
-
 
 
   // =========================================
@@ -777,31 +598,22 @@
 
   function createMarker(
     feature,
-    latlng,
-    id
+    latlng
   ) {
 
     const p =
       feature.properties || {};
 
-
     const category =
       p['文化財分類'] || '';
-
 
     const group =
       getCategoryGroup(category);
 
 
-    const favorite =
-      isFavorite(id);
-
-
-
-    // 国宝
+    // 国宝 ★
     if (
-      group ===
-      'nationalTreasure'
+      group === 'nationalTreasure'
     ) {
 
       const icon =
@@ -813,23 +625,19 @@
           html: `
             <div
               class="special-symbol"
-              style="
-                color:#d73027;
-                font-size:${favorite ? 29 : 24}px;
-              "
+              style="color:#d73027"
             >
               ★
             </div>
           `,
 
           iconSize:
-            [32, 32],
+            [30, 30],
 
           iconAnchor:
-            [16, 16]
+            [15, 15]
 
         });
-
 
       return L.marker(
         latlng,
@@ -838,8 +646,7 @@
     }
 
 
-
-    // 重要文化財
+    // 重要文化財 ◆
     if (
       group === 'important'
     ) {
@@ -853,30 +660,25 @@
           html: `
             <div
               class="special-symbol"
-              style="
-                color:#f39c12;
-                font-size:${favorite ? 29 : 24}px;
-              "
+              style="color:#f39c12"
             >
               ◆
             </div>
           `,
 
           iconSize:
-            [32, 32],
+            [30, 30],
 
           iconAnchor:
-            [16, 16]
+            [15, 15]
 
         });
-
 
       return L.marker(
         latlng,
         { icon }
       );
     }
-
 
 
     let color =
@@ -902,53 +704,31 @@
     return L.circleMarker(
       latlng,
       {
-        radius:
-          favorite ? 10 : 8,
-
-        color:
-          favorite
-            ? '#ffd000'
-            : '#ffffff',
-
-        weight:
-          favorite ? 3 : 2,
-
-        fillColor:
-          color,
-
-        fillOpacity:
-          0.9
+        radius: 8,
+        color: '#ffffff',
+        weight: 2,
+        fillColor: color,
+        fillOpacity: 0.9
       }
     );
   }
-
 
 
   // =========================================
   // ポップアップ
   // =========================================
 
-  function buildPopupHtml(
-    feature,
-    id
-  ) {
+  function buildPopupHtml(feature) {
 
     const p =
       feature.properties || {};
-
 
     const name =
       p.name ||
       '名称不明';
 
-
     const category =
       p['文化財分類'] || '';
-
-
-    const favorite =
-      isFavorite(id);
-
 
     const lines = [];
 
@@ -977,9 +757,7 @@
       lines.push(`
         <div class="popup-row">
           住所：
-          ${escapeHtml(
-            p.address
-          )}
+          ${escapeHtml(p.address)}
         </div>
       `);
 
@@ -990,35 +768,15 @@
 
       lines.push(`
         <div class="popup-row">
-          ${escapeHtml(
-            p.description
-          )}
+          ${escapeHtml(p.description)}
         </div>
       `);
 
     }
 
 
-    lines.push(`
-      <button
-        class="favorite-popup-button"
-        onclick="toggleFavorite(
-          ${JSON.stringify(id)}
-        )"
-      >
-        ${
-          favorite
-            ? '★ お気に入り済み'
-            : '☆ お気に入りに追加'
-        }
-      </button>
-    `);
-
-
     return lines.join('');
-
   }
-
 
 
   // =========================================
@@ -1037,7 +795,6 @@
 
       }
 
-
       return response.json();
 
     })
@@ -1054,9 +811,7 @@
             !feature.geometry ||
             feature.geometry.type !== 'Point'
           ) {
-
             return;
-
           }
 
 
@@ -1071,19 +826,9 @@
             );
 
 
-          const id =
-            createFeatureId(
-              feature,
-              lat,
-              lon
-            );
-
-
           markerRegistry.push({
-            id,
             feature,
-            latlng,
-            marker: null
+            latlng
           });
 
 
@@ -1112,9 +857,6 @@
 
       }
 
-
-      updateFavoriteCount();
-
     })
 
     .catch(error => {
@@ -1128,7 +870,6 @@
     });
 
 
-
   // =========================================
   // マーカー再描画
   // =========================================
@@ -1138,10 +879,19 @@
     Object
       .values(layers)
       .forEach(layer => {
-
         layer.clearLayers();
-
       });
+
+
+    const keyword =
+      document
+        .getElementById('nameSearch')
+        .value
+        .trim()
+        .toLowerCase();
+
+
+    let visibleCount = 0;
 
 
     markerRegistry.forEach(
@@ -1150,6 +900,12 @@
         const p =
           item.feature
             .properties || {};
+
+
+        const name =
+          String(
+            p.name || ''
+          );
 
 
         const category =
@@ -1162,6 +918,7 @@
           );
 
 
+        // カテゴリ判定
         const checkbox =
           document.querySelector(
             `input[data-layer="${group}"]`
@@ -1174,14 +931,18 @@
             : true;
 
 
-        const favoriteVisible =
-          !favoriteOnly ||
-          isFavorite(item.id);
+        // LIKE検索
+        const nameVisible =
+          keyword === ''
+          ||
+          name
+            .toLowerCase()
+            .includes(keyword);
 
 
         if (
           !categoryVisible ||
-          !favoriteVisible
+          !nameVisible
         ) {
 
           return;
@@ -1192,15 +953,13 @@
         const marker =
           createMarker(
             item.feature,
-            item.latlng,
-            item.id
+            item.latlng
           );
 
 
         marker.bindPopup(
           buildPopupHtml(
-            item.feature,
-            item.id
+            item.feature
           )
         );
 
@@ -1210,13 +969,57 @@
         );
 
 
-        item.marker =
-          marker;
+        visibleCount++;
 
       });
 
+
+    updateSearchInfo(
+      keyword,
+      visibleCount
+    );
   }
 
+
+  // =========================================
+  // 検索
+  // =========================================
+
+  document
+    .getElementById(
+      'nameSearch'
+    )
+    .addEventListener(
+      'input',
+      refreshMarkers
+    );
+
+
+  function updateSearchInfo(
+    keyword,
+    count
+  ) {
+
+    const info =
+      document.getElementById(
+        'searchInfo'
+      );
+
+
+    if (!keyword) {
+
+      info.textContent =
+        `現在 ${count} 件表示`;
+
+      return;
+
+    }
+
+
+    info.textContent =
+      `「${keyword}」を含む文化財：${count} 件`;
+
+  }
 
 
   // =========================================
@@ -1235,7 +1038,6 @@
       );
 
     });
-
 
 
   // =========================================
@@ -1262,11 +1064,11 @@
           });
 
 
-        favoriteOnly =
-          false;
-
-
-        updateFavoriteButton();
+        document
+          .getElementById(
+            'nameSearch'
+          )
+          .value = '';
 
 
         refreshMarkers();
@@ -1275,9 +1077,8 @@
     );
 
 
-
   // =========================================
-  // 国宝・重要だけ
+  // 国宝・重要文化財のみ
   // =========================================
 
   document
@@ -1314,66 +1115,6 @@
 
       }
     );
-
-
-
-  // =========================================
-  // お気に入りだけ
-  // =========================================
-
-  document
-    .getElementById(
-      'favoriteOnlyButton'
-    )
-    .addEventListener(
-      'click',
-      () => {
-
-        favoriteOnly =
-          !favoriteOnly;
-
-
-        updateFavoriteButton();
-
-
-        refreshMarkers();
-
-      }
-    );
-
-
-  function updateFavoriteButton() {
-
-    const button =
-      document.getElementById(
-        'favoriteOnlyButton'
-      );
-
-
-    if (favoriteOnly) {
-
-      button.textContent =
-        '★ お気に入りだけ表示中';
-
-
-      button.classList.add(
-        'active'
-      );
-
-    } else {
-
-      button.textContent =
-        '☆ お気に入りだけ表示';
-
-
-      button.classList.remove(
-        'active'
-      );
-
-    }
-
-  }
-
 
 
   // =========================================
@@ -1464,7 +1205,6 @@
     );
 
 
-
   // =========================================
   // HTMLエスケープ
   // =========================================
@@ -1497,7 +1237,6 @@
         "'",
         '&#039;'
       );
-
   }
 
 </script>
